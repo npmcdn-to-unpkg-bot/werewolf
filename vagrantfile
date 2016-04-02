@@ -1,0 +1,187 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure(2) do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+  config.vm.box = "ubuntu/trusty64"
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 5858, host: 5858
+  config.vm.network "forwarded_port", guest: 9000, host: 9000
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  # config.vm.network "private_network", ip: "192.168.33.10"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network "public_network"
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  config.vm.synced_folder ".", "/vagrant_projects"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+  config.vm.provider "virtualbox" do |vb|
+    # Display the VirtualBox GUI when booting the machine
+    vb.gui = false
+
+    # Customize the amount of memory on the VM:
+    vb.memory = "2028"
+
+    # Customize the nuber of cpus on the VM:
+    vb.cpus = 2
+  end
+  #
+  # View the documentation for the provider you are using for more
+  # information on available options.
+
+  # Define a Vagrant Push strategy for pushing to Atlas. Other push strategies
+  # such as FTP and Heroku are also available. See the documentation at
+  # https://docs.vagrantup.com/v2/push/atlas.html for more information.
+  # config.push.define "atlas" do |push|
+  #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
+  # end
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  config.vm.provision "shell", inline: <<-SHELL
+    # SWITCH to vagrant to make sure he has all this configured
+    su vagrant
+
+    # swap_setup.sh
+    ################
+    echo 'swap_setup.sh'
+    echo '################'
+
+    # SETUP Swap
+    # size of swapfile in megabytes
+    swapsize=8000
+
+    # does the swap file already exist?
+    grep -q "swapfile" /etc/fstab
+
+    # if not then create it
+    if [ $? -ne 0 ]; then
+      echo 'swapfile not found. Adding swapfile.'
+      sudo fallocate -l ${swapsize}M /swapfile
+      sudo chmod 600 /swapfile
+      sudo mkswap /swapfile
+      sudo swapon /swapfile
+      echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+    else
+      echo 'swapfile found. No changes made.'
+    fi
+
+    # output results to terminal
+    df -h
+    cat /proc/swaps
+    cat /proc/meminfo | grep Swap
+
+    # setup.sh
+    ################
+    echo 'setup.sh'
+    echo '################'
+
+    # UPDATE apt-get
+    echo 'UPDATE apt-get'
+    sudo apt-get update
+
+    # GET rake
+    echo 'GET rake'
+    sudo apt-get install -y rake
+
+    # GET git
+    echo 'GET git'
+    sudo apt-get install -y git
+    git config --global url."https://".insteadOf git://
+
+    # GET tree
+    echo 'GET tree'
+    sudo apt-get install -y tree
+
+    # GET w3m
+    echo 'GET w3m'
+    sudo apt-get install -y w3m
+
+    # GET vim
+    echo 'GET vim'
+    sudo apt-get install -y vim
+    curl -L https://bit.ly/janus-bootstrap | bash
+
+    # Get nodejs
+    echo 'GET nodejs'
+    curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    sudo apt-get install -y build-essential
+
+    # GET mongodb
+    echo 'GET mongodb'
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+    echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
+    sudo apt-get update
+    sudo apt-get install -y mongodb-org
+
+    # START mongodb
+    echo 'START mongodb'
+    sudo service mongod start
+
+    # UPDATE node
+    echo 'SETUP node'
+    sudo npm cache clean -f
+    sudo npm install -g n
+    sudo n stable
+
+    # UPDATE npm
+    echo 'SETUP npm'
+    sudo npm install -g npm
+
+    # SETUP Global node needs
+    echo 'SETUP Global node needs'
+    sudo npm install -g bower
+    sudo npm install -g gulp-cli
+    sudo npm install -g grunt-cli
+    sudo npm install -g babel-core
+    sudo npm install -g babel-loader
+    sudo npm install -g babel-runtime
+    sudo npm install -g babel-register
+    sudo npm install -g phantomjs-prebuilt
+    sudo npm install -g yo
+    sudo npm install -g generator-angular-fullstack
+
+    # SETUP yo
+    echo 'SETUP yo'
+    echo "export NODE_PATH=$NODE_PATH:/usr/local/lib/node_modules" >> ~/.bashrc
+    source ~/.bashrc
+
+    # SETUP project dir
+    mkdir /home/$(whoami)/projects
+    ln -s /vagrant_projects /home/$(whoami)/projects
+    mkdir /vagrant_projects/project
+    cd /vagrant_projects/project
+  SHELL
+end
