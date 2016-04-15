@@ -179,9 +179,8 @@ Vagrant.configure(2) do |config|
     source ~/.bashrc
 
     # SETUP project dir
-    mkdir /home/$(whoami)/projects
-    ln -s /vagrant_projects /home/$(whoami)/projects
-    mkdir /vagrant_projects/project
-    cd /vagrant_projects/project
+    cd ~
+    ln -s /vagrant_projects /home/vagrant/
+    git clone https://github.com/Steel-Pika/werewolf.git
   SHELL
 end
